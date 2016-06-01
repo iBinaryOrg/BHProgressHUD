@@ -10,6 +10,7 @@
 		CC2315DD1CFF0A1400E46553 /* BHProgressHUD.h in Headers */ = {isa = PBXBuildFile; fileRef = CC2315DC1CFF0A1400E46553 /* BHProgressHUD.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CC2315E41CFF0A1400E46553 /* BHProgressHUD.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CC2315D91CFF0A1400E46553 /* BHProgressHUD.framework */; };
 		CC2315E91CFF0A1400E46553 /* BHProgressHUDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2315E81CFF0A1400E46553 /* BHProgressHUDTests.swift */; };
+		CC2316201CFF1B7400E46553 /* BHProgressHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC23161F1CFF1B7400E46553 /* BHProgressHUD.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +30,7 @@
 		CC2315E31CFF0A1400E46553 /* BHProgressHUDTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BHProgressHUDTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC2315E81CFF0A1400E46553 /* BHProgressHUDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BHProgressHUDTests.swift; sourceTree = "<group>"; };
 		CC2315EA1CFF0A1400E46553 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CC23161F1CFF1B7400E46553 /* BHProgressHUD.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BHProgressHUD.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				CC2315DC1CFF0A1400E46553 /* BHProgressHUD.h */,
+				CC23161F1CFF1B7400E46553 /* BHProgressHUD.swift */,
 				CC2315DE1CFF0A1400E46553 /* Info.plist */,
 			);
 			path = BHProgressHUD;
@@ -194,6 +197,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC2316201CFF1B7400E46553 /* BHProgressHUD.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,6 +314,7 @@
 		CC2315EE1CFF0A1400E46553 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -321,12 +326,14 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.iBinaryOrg.BHProgressHUD;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		CC2315EF1CFF0A1400E46553 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
