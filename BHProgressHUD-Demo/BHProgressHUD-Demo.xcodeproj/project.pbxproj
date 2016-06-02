@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		20E95D601CFFD97000C9B9D4 /* BHProgressHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E95D5F1CFFD96F00C9B9D4 /* BHProgressHUD.swift */; };
 		CC2316001CFF0B1E00E46553 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2315FF1CFF0B1E00E46553 /* AppDelegate.swift */; };
 		CC2316021CFF0B1E00E46553 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2316011CFF0B1E00E46553 /* ViewController.swift */; };
 		CC2316051CFF0B1E00E46553 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CC2316031CFF0B1E00E46553 /* Main.storyboard */; };
@@ -26,6 +27,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		20E95D5F1CFFD96F00C9B9D4 /* BHProgressHUD.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = BHProgressHUD.swift; path = ../BHProgressHUD/BHProgressHUD/BHProgressHUD.swift; sourceTree = "<group>"; };
 		CC2315FC1CFF0B1E00E46553 /* BHProgressHUD-Demo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BHProgressHUD-Demo.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC2315FF1CFF0B1E00E46553 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		CC2316011CFF0B1E00E46553 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -56,9 +58,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		20E95D5E1CFFD95B00C9B9D4 /* BHProgressHUD */ = {
+			isa = PBXGroup;
+			children = (
+				20E95D5F1CFFD96F00C9B9D4 /* BHProgressHUD.swift */,
+			);
+			name = BHProgressHUD;
+			sourceTree = "<group>";
+		};
 		CC2315F31CFF0B1E00E46553 = {
 			isa = PBXGroup;
 			children = (
+				20E95D5E1CFFD95B00C9B9D4 /* BHProgressHUD */,
 				CC2315FE1CFF0B1E00E46553 /* BHProgressHUD-Demo */,
 				CC2316131CFF0B1E00E46553 /* BHProgressHUD-DemoTests */,
 				CC2315FD1CFF0B1E00E46553 /* Products */,
@@ -198,6 +209,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CC2316021CFF0B1E00E46553 /* ViewController.swift in Sources */,
+				20E95D601CFFD97000C9B9D4 /* BHProgressHUD.swift in Sources */,
 				CC2316001CFF0B1E00E46553 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

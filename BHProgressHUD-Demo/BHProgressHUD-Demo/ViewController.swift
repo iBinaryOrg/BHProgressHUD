@@ -20,6 +20,12 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
-
+    @IBAction func showAction() {
+        BHProgressHUD.showHUD(addedTo: self.view, animated: true)
+    }
+    
+    @IBAction func hideAction() {
+        BHProgressHUD.hideHUD(forView: self.view, animated: true)
+    }
 }
 
