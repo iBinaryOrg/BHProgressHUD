@@ -248,8 +248,8 @@ class BHProgressHUD: UIView {
         
         // Ensure minimum side margin is kept
         var sideContraints = [NSLayoutConstraint]()
-        sideContraints.appendContentsOf(NSLayoutConstraint.constraintsWithVisualFormat("|-(>=margin)-[bezel]-(>=margin)-|", options: [], metrics: metrics, views: ["bezelView" : bezelView!]))
-        sideContraints.appendContentsOf(NSLayoutConstraint.constraintsWithVisualFormat("V:|-(>=margin)-[bezel]-(>=margin)-|", options: [], metrics: metrics, views: ["bezelView" : bezelView!]))
+        sideContraints.appendContentsOf(NSLayoutConstraint.constraintsWithVisualFormat("|-(>=margin)-[bezel]-(>=margin)-|", options: [], metrics: metrics, views: ["bezel" : bezelView!]))
+        sideContraints.appendContentsOf(NSLayoutConstraint.constraintsWithVisualFormat("V:|-(>=margin)-[bezel]-(>=margin)-|", options: [], metrics: metrics, views: ["bezel" : bezelView!]))
         self.applyPriority(999.0, toConstraints: sideContraints)
         self.addConstraints(sideContraints)
         
@@ -327,7 +327,7 @@ class BHProgressHUD: UIView {
         }
     }
     
-    func applyPriority(priority: UILayoutPriority, toConstraints: [NSLayoutConstraint]) {
+    func applyPriority(priority: UILayoutPriority, toConstraints constraints: [NSLayoutConstraint]) {
         for constraint in constraints {
             constraint.priority = priority
         }
@@ -525,31 +525,26 @@ class BHBarProgressView: UIView {
 class BHBackgroundView: UIView {
     
     var style: BHProgressHUDBackgroundStyle? {
-        set {
+        willSet {
             var newStyle: BHProgressHUDBackgroundStyle?
             if newValue == .Blur && kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0 {
                 newStyle = .SolidColor
             }
-            if self.style != newStyle {
+            
+            if style != newStyle {
                 self.style = newStyle
                 updateForBackgroundStyle()
             }
         }
-        get {
-            return self.style
-        }
     }
     
     var color: UIColor? {
-        set {
+        willSet {
             assert(color != nil, "The color should not be nil.")
-            if color != newValue && !(color?.isEqual(newValue))! {
+            if color != newValue && color!.isEqual(newValue) {
                 self.color = newValue
                 updateViewForColor()
             }
-        }
-        get {
-            return self.color
         }
     }
     
@@ -646,18 +641,10 @@ class BHBackgroundView: UIView {
 private class BHProgressHUDRoundedButton: UIButton {
     
     override var highlighted: Bool {
-        didSet {
+        willSet {
             let baseColor = self.titleColorForState(.Selected)
-            backgroundColor = highlighted ? baseColor?.colorWithAlphaComponent(0.1) : UIColor.clearColor()
+            backgroundColor = newValue == true ? baseColor?.colorWithAlphaComponent(0.1) : UIColor.clearColor()
         }
-        
-//        set {
-//            let baseColor = self.titleColorForState(.Selected)
-//            backgroundColor = newValue ? baseColor?.colorWithAlphaComponent(0.1) : UIColor.clearColor()
-//        }
-//        get {
-//            return self.highlighted
-//        }
     }
     
     override init(frame: CGRect) {
@@ -692,7 +679,7 @@ private class BHProgressHUDRoundedButton: UIButton {
     override private func setTitleColor(color: UIColor?, forState state: UIControlState) {
         super.setTitleColor(color, forState: state)
         // Update related colors
-//        highlighted = self.highlighted
+//        self.highlighted = self.highlighted
         self.layer.borderColor = color?.CGColor
     }
 }
