@@ -8,7 +8,7 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, BHProgressHUDDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,11 +21,18 @@ class ViewController: UIViewController {
     }
 
     @IBAction func showAction() {
-        BHProgressHUD.showHUD(addedTo: self.view, animated: true)
+        let hud = BHProgressHUD.showHUD(addedTo: self.view, animated: true)
+        hud.mode = .Determinate
+        hud.userInteractionEnabled = false
+        hud.delegate = self
     }
     
     @IBAction func hideAction() {
         BHProgressHUD.hideHUD(forView: self.view, animated: true)
+    }
+    
+    func hudWasHidden(hud: BHProgressHUD) {
+        print(String(format: "-------- %@ --------", #function))
     }
 }
 

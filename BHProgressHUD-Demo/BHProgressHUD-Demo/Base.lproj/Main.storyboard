@@ -39,13 +39,27 @@
                                     <action selector="hideAction" destination="BYZ-38-t0r" eventType="touchUpInside" id="u1M-lE-48p"/>
                                 </connections>
                             </button>
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="sJ2-Ri-cRj">
+                                <rect key="frame" x="180" y="136" width="240" height="444"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="444" id="cjd-gU-WEP"/>
+                                    <constraint firstAttribute="width" constant="240" id="q5E-lY-Xgj"/>
+                                </constraints>
+                                <string key="text">Lorem ipsum dolor sit er elit lamet, consectetaur cillium adipisicing pecu, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Nam liber te conscient to factor tum poen legum odioque civiuda.</string>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
+                            </textView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
                             <constraint firstItem="pqv-J1-voP" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" constant="27" id="MIm-fX-9jX"/>
                             <constraint firstItem="3yf-M3-jOw" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="Wrp-zp-Sbo"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="sJ2-Ri-cRj" secondAttribute="bottom" constant="20" id="hmP-mH-Ejy"/>
+                            <constraint firstItem="sJ2-Ri-cRj" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="ifI-Xs-8mQ"/>
                             <constraint firstItem="3yf-M3-jOw" firstAttribute="top" secondItem="pqv-J1-voP" secondAttribute="bottom" constant="21" id="kae-Gt-xfh"/>
                             <constraint firstItem="pqv-J1-voP" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="xKE-qD-qr9"/>
+                            <constraint firstItem="sJ2-Ri-cRj" firstAttribute="top" secondItem="3yf-M3-jOw" secondAttribute="bottom" constant="8" id="yZk-TE-SAW"/>
                         </constraints>
                     </view>
                 </viewController>
