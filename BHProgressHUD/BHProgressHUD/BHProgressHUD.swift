@@ -40,6 +40,10 @@ let kDefaultPadding: CGFloat = 4.0
 let kDefaultLabelFontSize: CGFloat = 16.0
 let kDefaultDetailLabelFontSize: CGFloat = 12.0
 
+private func BHMainThreadAssert() {
+    assert(NSThread.isMainThread(), "MBProgressHUD needs to be accessed on the main thread.")
+}
+
 // MARK: - Class
 class BHProgressHUD: UIView {
     
@@ -113,6 +117,7 @@ class BHProgressHUD: UIView {
         self.layer.allowsGroupOpacity = false
         
         self.setupViews()
+        self.updateIndicators()
     }
     
     //MARK: Show & Hide
@@ -133,14 +138,29 @@ class BHProgressHUD: UIView {
     }
     
     func hide(animated animated: Bool) {
-        
+        BHMainThreadAssert()
+        graceTimer?.invalidate()
+        finished = true
+        // If the minShow time is set, calculate how long the HUD was shown,
+        // and postpone the hiding operation if necessary
+        if minShowTime > 0.0 && showStarted != nil {
+            let interv: NSTimeInterval = NSDate().timeIntervalSinceDate(showStarted!)
+            if interv < minShowTime {
+                let timer = NSTimer.init(timeInterval: minShowTime! - interv, target: self, selector: #selector(handleMinShowTimer(_:)), userInfo: nil, repeats: false)
+                NSRunLoop.currentRunLoop().addTimer(timer, forMode: NSRunLoopCommonModes)
+                minShowTimer = timer
+                return
+            }
+        }
+        // ... otherwise hide the HUD immediately
+        self.hide(usingAnimation: useAnimation)
     }
     
     func hide(animated animated: Bool, afterDelay: NSTimeInterval) {
         
     }
     
-    //MARK: Timer callback
+    //MARK: Timer callbacks
     @objc private func handleGraceTimer(theTimer: NSTimer) {
         if !finished {
             self.show(usingAnimation: useAnimation)
@@ -148,7 +168,7 @@ class BHProgressHUD: UIView {
     }
     
     @objc private func handleMinShowTimer(theTimer: NSTimer) {
-//        self.hide
+        self.hide(usingAnimation: useAnimation)
     }
     
     @objc private func handleHideTimer(theTimer: NSTimer) {
@@ -156,7 +176,92 @@ class BHProgressHUD: UIView {
     }
     
     //MARK: View Hierrarchy
+    override func didMoveToSuperview() {
+        //TODO: self.updateForCurrentOrientationAnimated(false)
+    }
     
+    //MARK: Internal show & hide operations
+    private func show(usingAnimation animated: Bool) {
+        bezelView?.layer.removeAllAnimations()
+        backgroundView?.layer.removeAllAnimations()
+        
+        hideDelayTimer?.invalidate()
+        
+        showStarted = NSDate()
+        self.alpha = 1.0
+        
+        if animated {
+            self.animateIn(true, type: self.animationType, completion: nil)
+        } else {
+            self.bezelView?.alpha = CGFloat(opacity)
+            self.backgroundView?.alpha = 1.0
+        }
+    }
+    
+    private func hide(usingAnimation animated: Bool) {
+        if animated && showStarted != nil {
+            showStarted = nil
+            self.animateIn(false, type: animationType, completion: { (finished) in
+                self.done(finished: finished)
+            })
+        } else {
+            showStarted = nil
+            bezelView?.alpha = 0.0
+            backgroundView?.alpha = 0.0
+            self.done(finished: true)
+        }
+    }
+    
+    private func animateIn(animategIn: Bool, type: BHProgressHUDAnimation, completion: ((Bool) -> ())?) {
+        // Automatically determine the correct zoom animation type
+        var newType: BHProgressHUDAnimation = type
+        if type == .Zoom {
+            newType = animategIn ? .ZoomIn : .ZoomOut
+        }
+        
+        let small = CGAffineTransformMakeScale(0.5, 0.5)
+        let large = CGAffineTransformMakeScale(1.5, 1.5)
+        
+        // Set starting state
+        if animategIn && bezelView?.alpha == 0 && newType == .ZoomIn {
+            bezelView?.transform = small
+        } else if animategIn && bezelView?.alpha == 0.0 && newType == .ZoomOut {
+            bezelView?.transform = large
+        }
+        
+        // Perform animations
+        let animations:() -> () = {
+            [weak self] in
+            if let strongSelf = self {
+                if animategIn {
+                    strongSelf.bezelView?.transform = CGAffineTransformIdentity
+                } else if !animategIn && newType == .ZoomIn {
+                    strongSelf.transform = large
+                } else if !animategIn && newType == .ZoomOut {
+                    strongSelf.transform = small
+                }
+                
+                strongSelf.bezelView?.alpha = animategIn ? 1.0 : 0.0
+                strongSelf.backgroundView?.alpha = animategIn ? 1.0 : 0.0
+            }
+        }
+        
+        UIView.animateWithDuration(0.3, delay: 0.0, usingSpringWithDamping: 1.0, initialSpringVelocity: 0.0, options: [.BeginFromCurrentState], animations: animations, completion: completion)
+    }
+    
+    private func done(finished finished: Bool) {
+        // Cancel any scheduled hideDelayed: calls
+        hideDelayTimer?.invalidate()
+        
+        if finished {
+            self.alpha = 0.0
+            if self.removeFromSuperViewOnHide {
+                self.removeFromSuperview()
+            }
+        }
+        
+        delegate?.hudWasHidden?(self)
+    }
     
     //MARK: UI
     private func setupViews() {
@@ -190,34 +295,127 @@ class BHProgressHUD: UIView {
         detailsLabel!.numberOfLines = 0
         detailsLabel!.font = UIFont.boldSystemFontOfSize(CGFloat(kDefaultDetailLabelFontSize))
         detailsLabel!.opaque = false
-        detailsLabel?.backgroundColor = UIColor.clearColor()
+        detailsLabel!.backgroundColor = UIColor.clearColor()
         
         button = BHProgressHUDRoundedButton(type:.Custom)
-        button?.titleLabel?.textAlignment = .Center
-        button?.titleLabel?.font = UIFont.boldSystemFontOfSize(CGFloat(kDefaultDetailLabelFontSize))
-        button?.setTitleColor(defaultColor, forState: .Normal)
+        button!.titleLabel?.textAlignment = .Center
+        button!.titleLabel?.font = UIFont.boldSystemFontOfSize(CGFloat(kDefaultDetailLabelFontSize))
+        button!.setTitleColor(defaultColor, forState: .Normal)
         
         let viewAry: [UIView] = [label!, detailsLabel!, button!]
         for view: UIView in viewAry {
             view.translatesAutoresizingMaskIntoConstraints = false
             view.setContentCompressionResistancePriority(998.0, forAxis: .Horizontal)
             view .setContentCompressionResistancePriority(998, forAxis: .Vertical)
-            bezelView?.addSubview(view)
+            bezelView!.addSubview(view)
         }
         
         topSpacer = UIView()
         topSpacer!.translatesAutoresizingMaskIntoConstraints = false
         topSpacer!.hidden = true
-        bezelView?.addSubview(topSpacer!)
+        bezelView!.addSubview(topSpacer!)
         
         bottomSpacer = UIView()
         bottomSpacer!.translatesAutoresizingMaskIntoConstraints = false
         bottomSpacer!.hidden = true
-        bezelView?.addSubview(bottomSpacer!)
+        bezelView!.addSubview(bottomSpacer!)
     }
     
-    private func updateIndicateors() {
+    private func updateIndicators() {
+        let isActivityIndicator: Bool = indicator?.isKindOfClass(UIActivityIndicatorView.self) ?? false
+        let isRoundIndicator: Bool = indicator?.isKindOfClass(BHRoundProgressView.self) ?? false
         
+        if mode == .Indeterminate {
+            if !isActivityIndicator {
+                // Update to indeterminate indicator
+                indicator?.removeFromSuperview()
+                indicator = UIActivityIndicatorView(activityIndicatorStyle: .WhiteLarge)
+                (indicator! as! UIActivityIndicatorView).startAnimating()
+                bezelView?.addSubview(indicator!)
+            }
+        }
+        else if mode == .DeterminateHorizontalBar {
+            // Update to bar determinate indicator
+            indicator?.removeFromSuperview()
+            indicator = BHBarProgressView()
+            bezelView?.addSubview(indicator!)
+        }
+        else if mode == .Determinate || mode == .AnnularDeterminate {
+            if !isRoundIndicator {
+                // Update to determinante indicator
+                indicator?.removeFromSuperview()
+                indicator = BHRoundProgressView()
+                bezelView?.addSubview(indicator!)
+            }
+            if mode == .AnnularDeterminate {
+                (indicator! as! BHRoundProgressView).annular = true
+            }
+        }
+        else if mode == .CustomView && customView != indicator {
+            // Update custom view indicator
+            indicator?.removeFromSuperview()
+            indicator = customView
+            bezelView?.addSubview(indicator!)
+        }
+        else if mode == .Text {
+            indicator?.removeFromSuperview()
+            indicator = nil
+        }
+        indicator?.translatesAutoresizingMaskIntoConstraints = false
+        
+//        if indicator?.respondsToSelector(#selector(setProgress(_:))) != nil {
+//        indicator?.setValue(NSNumber(float: Float(self.progress)), forKey: "progress")
+//        }
+        
+        indicator?.setContentCompressionResistancePriority(998.0, forAxis: .Horizontal)
+        indicator?.setContentCompressionResistancePriority(998.0, forAxis: .Vertical)
+        
+        self.updateViewsForColor(contentColor)
+        self.setNeedsUpdateConstraints()
+    }
+    
+    private func updateViewsForColor(color: UIColor?) {
+        if var color = color {
+            label?.textColor = color
+            detailsLabel?.textColor = color
+            button?.setTitleColor(color, forState: .Normal)
+            
+            if let acIndicatorColor = self.activityIndicatorColor {
+                color = acIndicatorColor
+            }
+            
+            if ((indicator?.isKindOfClass(UIActivityIndicatorView.self)) == true) {
+                (indicator! as! UIActivityIndicatorView).color = color
+            }
+        }
+    }
+    
+    private func updateBezelMotionEffects() {
+//        if #available(iOS 7.0, *) {}
+        if bezelView?.respondsToSelector(#selector(addMotionEffect(_:))) == false {
+            return
+        }
+        
+        if defaultMotionEffectsEnabled == true {
+            let effectOffset = 10.0
+            let effectX = UIInterpolatingMotionEffect(keyPath: "center.x", type: .TiltAlongHorizontalAxis)
+            effectX.maximumRelativeValue = NSNumber(float: Float(effectOffset))
+            effectX.minimumRelativeValue = NSNumber(float: Float(-effectOffset))
+            
+            let effectY = UIInterpolatingMotionEffect(keyPath: "center.y", type: .TiltAlongVerticalAxis)
+            effectY.maximumRelativeValue = NSNumber(float: Float(effectOffset))
+            effectY.minimumRelativeValue = NSNumber(float: Float(-effectOffset))
+            
+            let group = UIMotionEffectGroup()
+            group.motionEffects = [effectX, effectY]
+            
+            bezelView?.addMotionEffect(group)
+        } else {
+            let effects = bezelView?.motionEffects
+            for effect in effects! {
+                bezelView?.removeMotionEffect(effect)
+            }
+        }
     }
     
     //MARK: Layout
@@ -333,65 +531,7 @@ class BHProgressHUD: UIView {
         }
     }
     
-    //MARK: Private Show & Hide 
-    private func show(usingAnimation animated: Bool) {
-        bezelView?.layer.removeAllAnimations()
-        backgroundView?.layer.removeAllAnimations()
-        
-        hideDelayTimer?.invalidate()
-        
-        showStarted = NSDate()
-        self.alpha = 1.0
-        
-        if animated {
-            self.animateIn(true, type: self.animationType, completion: nil)
-        } else {
-            self.bezelView?.alpha = CGFloat(opacity)
-            self.backgroundView?.alpha = 1.0
-        }
-    }
-    
-    private func animateIn(animategIn: Bool, type: BHProgressHUDAnimation, completion: ((Bool) -> ())?) {
-        // Automatically determine the correct zoom animation type
-        var newType: BHProgressHUDAnimation = type
-        if type == .Zoom {
-            newType = animategIn ? .ZoomIn : .ZoomOut
-        }
-        
-        let small = CGAffineTransformMakeScale(0.5, 0.5)
-        let large = CGAffineTransformMakeScale(1.5, 1.5)
-        
-        // Set starting state
-        if animategIn && bezelView?.alpha == 0 && newType == .ZoomIn {
-            bezelView?.transform = small
-        } else if animategIn && bezelView?.alpha == 0.0 && newType == .ZoomOut {
-            bezelView?.transform = large
-        }
-        
-        // Perform animations
-        let animations:() -> () = {
-            [weak self] in
-            if let strongSelf = self {
-                if animategIn {
-                    strongSelf.bezelView?.transform = CGAffineTransformIdentity
-                } else if !animategIn && newType == .ZoomIn {
-                    strongSelf.transform = large
-                } else if !animategIn && newType == .ZoomOut {
-                    strongSelf.transform = small
-                }
-                
-                strongSelf.bezelView?.alpha = animategIn ? 1.0 : 0.0
-                strongSelf.backgroundView?.alpha = animategIn ? 1.0 : 0.0
-            }
-        }
-        
-        UIView.animateWithDuration(0.3, delay: 0.0, usingSpringWithDamping: 1.0, initialSpringVelocity: 0.0, options: [.BeginFromCurrentState], animations: animations, completion: completion)
-    }
-    
-    private func BHMainThreadAssert() {
-        assert(NSThread.isMainThread(), "MBProgressHUD needs to be accessed on the main thread.")
-    }
-    
+    //MARK: Notifications
     private func updateForCurrentOrientation(animated animated: Bool) {
         // Stay in sync with the superview in any case
         if (self.superview != nil) {
@@ -448,10 +588,23 @@ extension BHProgressHUD {
     }
     
     class func hideHUD(forView view: UIView, animated: Bool) -> Bool {
+        let hud: BHProgressHUD? = self.HUDForView(view)
+        if let trueHud = hud {
+            trueHud.removeFromSuperViewOnHide = true
+            trueHud.hide(animated: animated)
+            return true
+        }
+        
         return true
     }
     
     class func HUDForView(view: UIView) -> BHProgressHUD? {
+        let subviewsEnum = view.subviews.reverse()
+        for subview in subviewsEnum {
+            if subview.isKindOfClass(self) {
+                return subview as? BHProgressHUD
+            }
+        }
         return nil
     }
 }
@@ -479,6 +632,10 @@ class BHRoundProgressView: UIView {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        print("BHRoundProgressView deinited.")
     }
     
     //MARK: Draw
@@ -515,6 +672,10 @@ class BHBarProgressView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        print("BHBarProgressView deinited.")
+    }
+    
     //MARK: Draw
     override func drawRect(rect: CGRect) {
         
@@ -526,7 +687,7 @@ class BHBackgroundView: UIView {
     
     var style: BHProgressHUDBackgroundStyle? {
         willSet {
-            var newStyle: BHProgressHUDBackgroundStyle?
+            var newStyle: BHProgressHUDBackgroundStyle? = newValue
             if newValue == .Blur && kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0 {
                 newStyle = .SolidColor
             }
@@ -583,6 +744,10 @@ class BHBackgroundView: UIView {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        print("BHBackgroundView deinited.")
     }
     
     override func intrinsicContentSize() -> CGSize {
@@ -655,6 +820,10 @@ private class BHProgressHUDRoundedButton: UIButton {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        print("BHProgressHUDRoundedButton deinited.")
     }
     
     override func layoutSubviews() {
