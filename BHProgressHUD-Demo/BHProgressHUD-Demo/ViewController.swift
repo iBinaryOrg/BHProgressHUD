@@ -22,7 +22,7 @@ class ViewController: UIViewController, BHProgressHUDDelegate {
 
     @IBAction func showAction() {
         let hud = BHProgressHUD.showHUD(addedTo: self.view, animated: true)
-        hud.mode = .Determinate
+//        hud.mode = .Indeterminate
         hud.userInteractionEnabled = false
         hud.delegate = self
     }

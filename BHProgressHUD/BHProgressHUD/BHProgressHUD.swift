@@ -53,7 +53,6 @@ class BHProgressHUD: UIView {
     var graceTime: NSTimeInterval?
     var minShowTime: NSTimeInterval?
     var removeFromSuperViewOnHide: Bool = false
-    var mode: BHProgressHUDMode = .Indeterminate
     var animationType: BHProgressHUDAnimation = .Fade
     var offset = CGPoint(x: 0, y: 0)
     var margin: CGFloat = 20.0
@@ -69,6 +68,15 @@ class BHProgressHUD: UIView {
     var label: UILabel?
     var detailsLabel: UILabel?
     var button: UIButton?
+    
+    //MARK: Observe
+    var mode: BHProgressHUDMode = .Indeterminate {
+        didSet {
+            if mode != oldValue {
+                self.updateIndicators()
+            }
+        }
+    }
     
     //MARK: Private var
     private var opacity: Float = 1.0
@@ -177,7 +185,7 @@ class BHProgressHUD: UIView {
     
     //MARK: View Hierrarchy
     override func didMoveToSuperview() {
-        //TODO: self.updateForCurrentOrientationAnimated(false)
+        self.updateForCurrentOrientation(animated: false)
     }
     
     //MARK: Internal show & hide operations
@@ -267,7 +275,7 @@ class BHProgressHUD: UIView {
     private func setupViews() {
         let defaultColor = contentColor
         
-        backgroundView = BHBackgroundView(frame: bounds)
+        backgroundView = BHBackgroundView(frame: self.bounds)
         backgroundView!.style = .SolidColor
         backgroundView!.backgroundColor = UIColor.clearColor()
         backgroundView!.autoresizingMask = [.FlexibleWidth, .FlexibleHeight]
@@ -279,6 +287,7 @@ class BHProgressHUD: UIView {
         bezelView!.layer.cornerRadius = 5.0
         bezelView!.alpha = 0.0
         self.addSubview(bezelView!)
+        self.updateBezelMotionEffects()
         
         label = UILabel()
         label!.adjustsFontSizeToFitWidth = false
@@ -423,7 +432,7 @@ class BHProgressHUD: UIView {
         var bezelConstraints = [NSLayoutConstraint]()
         let metrics = ["margin": NSNumber(float: Float(margin))]
         
-        var subviews: NSMutableArray = [topSpacer!, label!, detailsLabel!, button!, bottomSpacer!]
+        let subviews: NSMutableArray = [topSpacer!, label!, detailsLabel!, button!, bottomSpacer!]
         if (indicator != nil) {
             subviews.insertObject(indicator!, atIndex: 1)
         }
@@ -440,7 +449,7 @@ class BHProgressHUD: UIView {
         // Center bezel in container (self), applying the offset if set
         var centeringConstraints = [NSLayoutConstraint]()
         centeringConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.CenterX, relatedBy: NSLayoutRelation.Equal, toItem: self, attribute: NSLayoutAttribute.CenterX, multiplier:1.0, constant: offset.x))
-        centeringConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.CenterY, relatedBy: NSLayoutRelation.Equal, toItem: self, attribute: NSLayoutAttribute.CenterY, multiplier:1.0, constant: offset.x))
+        centeringConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.CenterY, relatedBy: NSLayoutRelation.Equal, toItem: self, attribute: NSLayoutAttribute.CenterY, multiplier:1.0, constant: offset.y))
         self.applyPriority(998.0, toConstraints: centeringConstraints)
         self.addConstraints(centeringConstraints)
         
@@ -454,8 +463,8 @@ class BHProgressHUD: UIView {
         // Minimum bezel size, if set
         if !CGSizeEqualToSize(minSize, CGSizeZero) {
             var minSizeConstraints = [NSLayoutConstraint]()
-            minSizeConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.Width, relatedBy: NSLayoutRelation.GreaterThanOrEqual, toItem: self, attribute: NSLayoutAttribute.NotAnAttribute, multiplier:1.0, constant: minSize.width))
-            minSizeConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.Height, relatedBy: NSLayoutRelation.GreaterThanOrEqual, toItem: self, attribute: NSLayoutAttribute.NotAnAttribute, multiplier:1.0, constant: minSize.height))
+            minSizeConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.Width, relatedBy: NSLayoutRelation.GreaterThanOrEqual, toItem: nil, attribute: NSLayoutAttribute.NotAnAttribute, multiplier:1.0, constant: minSize.width))
+            minSizeConstraints.append(NSLayoutConstraint(item: bezelView! , attribute: NSLayoutAttribute.Height, relatedBy: NSLayoutRelation.GreaterThanOrEqual, toItem: nil, attribute: NSLayoutAttribute.NotAnAttribute, multiplier:1.0, constant: minSize.height))
             self.applyPriority(997.0, toConstraints: minSizeConstraints)
             bezelConstraints.appendContentsOf(minSizeConstraints)
         }
@@ -520,7 +529,7 @@ class BHProgressHUD: UIView {
             let secondVisible = !secondView.hidden && !CGSizeEqualToSize(secondView.intrinsicContentSize(), CGSizeZero)
             // Set if both views are visible or if there's a visible view on top that doesn't have padding
             // added relative to the current view yet
-            padding.constant = (firstVisible && (secondVisible || hasVisibleAncestors)) ? kDefaultPadding : 0
+            padding.constant = (firstVisible && (secondVisible || hasVisibleAncestors)) ? kDefaultPadding : 0.0
             hasVisibleAncestors = secondVisible || hasVisibleAncestors
         }
     }
@@ -540,10 +549,11 @@ class BHProgressHUD: UIView {
         
         // Not needed on iOS 8+, compile out when the deployment target allows,
         // to avoid sharedApplication problems on extension targets
-        if __IPHONE_OS_VERSION_MIN_REQUIRED < 8000 {
+        if __IPHONE_OS_VERSION_MIN_REQUIRED < 80000 {
             // Only needed pre iOS 8 when added to a window
             let iOS8OrLater = (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_8_0)
-            if iOS8OrLater || (self.superview?.isKindOfClass(UIWindow.self))! {
+            if iOS8OrLater || !((self.superview?.isKindOfClass(UIWindow.self)) ?? false) {
+                //TODO: 此处判断有问题
                 return
             }
             
