@@ -36,6 +36,8 @@ enum BHProgressHUDBackgroundStyle: Int {
     optional func hudWasHidden(hud: BHProgressHUD);
 }
 // MARK: - Global var
+let BHProgressMaxOffset: CGFloat = 1000000.0
+
 let kDefaultPadding: CGFloat = 4.0
 let kDefaultLabelFontSize: CGFloat = 16.0
 let kDefaultDetailLabelFontSize: CGFloat = 12.0
@@ -54,17 +56,9 @@ class BHProgressHUD: UIView {
     var minShowTime: NSTimeInterval?
     var removeFromSuperViewOnHide: Bool = false
     var animationType: BHProgressHUDAnimation = .Fade
-    var offset = CGPoint(x: 0, y: 0)
-    var margin: CGFloat = 20.0
-    var defaultMotionEffectsEnabled: Bool = true
-    var contentColor: UIColor?
     
-    var minSize: CGSize = CGSizeZero
-    var square: Bool = false
-    var progress = 0.0
     var backgroundView: BHBackgroundView?
     var bezelView: BHBackgroundView?
-    var customView: UIView?
     var label: UILabel?
     var detailsLabel: UILabel?
     var button: UIButton?
@@ -74,6 +68,75 @@ class BHProgressHUD: UIView {
         didSet {
             if mode != oldValue {
                 self.updateIndicators()
+            }
+        }
+    }
+    
+    var customView: UIView? {
+        didSet {
+            if customView != oldValue {
+                if self.mode == .CustomView {
+                    self.updateIndicators()
+                }
+            }
+        }
+    }
+    
+    var offset: CGPoint = CGPoint(x: 0, y: 0) {
+        didSet {
+            if !CGPointEqualToPoint(offset, oldValue) {
+                self.setNeedsUpdateConstraints()
+            }
+        }
+    }
+    
+    var margin: CGFloat = 20.0 {
+        didSet {
+            if margin != oldValue {
+                self.setNeedsUpdateConstraints()
+            }
+        }
+    }
+    
+    var minSize: CGSize = CGSizeZero {
+        didSet {
+            if !CGSizeEqualToSize(minSize, oldValue) {
+                self.setNeedsUpdateConstraints()
+            }
+        }
+    }
+    
+    var square: Bool = false {
+        didSet {
+            if square != oldValue {
+                self.setNeedsUpdateConstraints()
+            }
+        }
+    }
+    
+    var progress: Float = 0.0 {
+        didSet {
+            if progress != oldValue {
+                let selector = Selector("setProgress:")
+                if self.indicator?.respondsToSelector(selector) == true {
+                    self.indicator?.setValue(NSNumber(float: progress), forKey: "progress")
+                }
+            }
+        }
+    }
+    
+    var contentColor: UIColor? {
+        didSet {
+            if contentColor != oldValue && !((contentColor?.isEqual(oldValue))!) {
+                self.updateViewsForColor(contentColor)
+            }
+        }
+    }
+    
+    var defaultMotionEffectsEnabled: Bool = true {
+        didSet {
+            if defaultMotionEffectsEnabled != oldValue {
+                self.updateBezelMotionEffects()
             }
         }
     }
@@ -164,8 +227,9 @@ class BHProgressHUD: UIView {
         self.hide(usingAnimation: useAnimation)
     }
     
-    func hide(animated animated: Bool, afterDelay: NSTimeInterval) {
-        
+    func hide(animated animated: Bool, afterDelay delay: NSTimeInterval) {
+        let timer = NSTimer(timeInterval: delay, target: self, selector: #selector(handleHideTimer(_:)), userInfo: animated, repeats: false)
+        NSRunLoop.currentRunLoop().addTimer(timer, forMode: NSRunLoopCommonModes)
     }
     
     //MARK: Timer callbacks
@@ -621,10 +685,33 @@ extension BHProgressHUD {
 
 //MARK: - BHRoundProgressView
 class BHRoundProgressView: UIView {
-    var progress: Float = 0.0
-    var progressTintColor: UIColor
-    var backgroundTintColor: UIColor
+    
     var annular: Bool = false
+    
+    var progress: Float = 0.0 {
+        didSet {
+            if progress != oldValue {
+                print("New progress is \(progress)")
+                self.setNeedsDisplay()
+            }
+        }
+    }
+    var progressTintColor: UIColor? {
+        didSet {
+            assert(progressTintColor != nil, "The color should not be nil.")
+            if progressTintColor != oldValue && !((progressTintColor?.isEqual(oldValue))!) {
+                self.setNeedsDisplay()
+            }
+        }
+    }
+    var backgroundTintColor: UIColor? {
+        didSet {
+            assert(backgroundTintColor != nil, "The color should not be nil.")
+            if backgroundTintColor != oldValue && !((backgroundTintColor?.isEqual(oldValue))!) {
+                self.setNeedsDisplay()
+            }
+        }
+    }
     
     //MARK: Life Cycle
     override init(frame: CGRect) {
@@ -648,9 +735,74 @@ class BHRoundProgressView: UIView {
         print("BHRoundProgressView deinited.")
     }
     
+    //MARK: Layout
+    override func intrinsicContentSize() -> CGSize {
+        return CGSizeMake(37.0, 37.0)
+    }
+    
     //MARK: Draw
     override func drawRect(rect: CGRect) {
+        let context = UIGraphicsGetCurrentContext()
+        let isPreiOS7 = kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0
         
+        if annular {
+            // Draw background
+            let lineWidth: CGFloat = isPreiOS7 ? 5.0 : 2.0
+            let processBackgroundPath = UIBezierPath()
+            processBackgroundPath.lineWidth = lineWidth
+            processBackgroundPath.lineCapStyle = .Butt
+            let center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds))
+            let radius: CGFloat = (self.bounds.size.width - lineWidth)/2
+            let startAngle: CGFloat = -(CGFloat(M_PI) / 2) // 90 degrees
+            var endAngle: CGFloat = (2 * CGFloat(M_PI)) + startAngle
+            processBackgroundPath.addArcWithCenter(center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+            backgroundTintColor?.set()
+            processBackgroundPath.stroke()
+            // Draw progress
+            let processPath = UIBezierPath()
+            processPath.lineCapStyle = isPreiOS7 ? .Round : .Square
+            processPath.lineWidth = lineWidth
+            endAngle = (CGFloat(self.progress) * 2 * CGFloat(M_PI)) + startAngle
+            processPath.addArcWithCenter(center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+            progressTintColor?.set()
+            processPath.stroke()
+        } else {
+            // Draw background
+            let lineWidth: CGFloat = 2.0
+            let allRect: CGRect = self.bounds
+            let circleRect: CGRect = CGRectInset(allRect, lineWidth/2, lineWidth/2)
+            let center: CGPoint = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds))
+            progressTintColor?.set()
+            backgroundTintColor?.setFill()
+            CGContextSetLineWidth(context, lineWidth)
+            if isPreiOS7 {
+                CGContextFillEllipseInRect(context, circleRect)
+            }
+            CGContextStrokeEllipseInRect(context, circleRect)
+            // 90 degrees
+            let startAngle = -(CGFloat(M_PI)/2.0)
+            // Draw progress
+            if isPreiOS7 {
+                let radius: CGFloat = (CGRectGetWidth(self.bounds)/2.0) - lineWidth
+                let endAngle: CGFloat = (CGFloat(self.progress) * 2.0 * CGFloat(M_PI)) + startAngle
+                progressTintColor?.setFill()
+                CGContextMoveToPoint(context, center.x, center.y)
+                CGContextAddArc(context, center.x, center.y, radius, startAngle, endAngle, 0)
+                CGContextClosePath(context)
+                CGContextFillPath(context)
+            } else {
+                let processPath = UIBezierPath()
+                processPath.lineCapStyle = .Butt
+                processPath.lineWidth = lineWidth * 2.0
+                let radius: CGFloat = (CGRectGetWidth(self.bounds) / 2.0) - (processPath.lineWidth / 2.0)
+                let endAngle: CGFloat = (CGFloat(self.progress) * 2.0 * CGFloat(M_PI)) + startAngle
+                processPath.addArcWithCenter(center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+                // Ensure that we don't get color overlaping when _progressTintColor alpha < 1.f.
+                CGContextSetBlendMode(context, .Copy)
+                progressTintColor?.set()
+                processPath.stroke()
+            }
+        }
     }
 }
 
@@ -696,24 +848,21 @@ class BHBarProgressView: UIView {
 class BHBackgroundView: UIView {
     
     var style: BHProgressHUDBackgroundStyle? {
-        willSet {
-            var newStyle: BHProgressHUDBackgroundStyle? = newValue
-            if newValue == .Blur && kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0 {
-                newStyle = .SolidColor
+        didSet {
+            if style == .Blur && kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0 {
+                style = .SolidColor
             }
             
-            if style != newStyle {
-                self.style = newStyle
+            if style != oldValue {
                 updateForBackgroundStyle()
             }
         }
     }
     
     var color: UIColor? {
-        willSet {
+        didSet {
             assert(color != nil, "The color should not be nil.")
-            if color != newValue && color!.isEqual(newValue) {
-                self.color = newValue
+            if color != oldValue && !(color!.isEqual(oldValue)) {
                 updateViewForColor()
             }
         }
@@ -760,6 +909,7 @@ class BHBackgroundView: UIView {
         print("BHBackgroundView deinited.")
     }
     
+    //MARK: Layout
     override func intrinsicContentSize() -> CGSize {
         return CGSizeZero
     }
@@ -802,12 +952,12 @@ class BHBackgroundView: UIView {
     func updateViewForColor() {
         if style == .Blur {
             if #available(iOS 8.0, *) {
-                backgroundColor = color
+                self.backgroundColor = color
             } else {
                 toolbar!.barTintColor = color
             }
         } else {
-            backgroundColor = color
+            self.backgroundColor = color
         }
     }
 }
